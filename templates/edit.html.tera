@@ -1,0 +1,23 @@
+{% extends "base" %}
+
+{% block title %}Éditer: {{ book.title }}{% endblock title %}
+
+{% block content %}
+    <a href="/list" class="btn-outline" style="margin-bottom: 20px;">← Retour</a>
+    
+    <div class="card">
+        <h1>Édition</h1>
+        <form action="/edit/{{ book.id }}" method="post">
+            <label>Série: <input type="text" name="series" value="{{ book.series | default(value='') }}"></label>
+            <div style="display: flex; gap: 20px;">
+                <label style="flex: 2;">Titre: <input type="text" name="title" value="{{ book.title }}" required></label>
+                <label style="flex: 1;">Volume #: <input type="number" name="volume_number" value="{{ book.volume_number | default(value='') }}"></label>
+            </div>
+            <label>Sous-titre: <input type="text" name="subtitle" value="{{ book.subtitle | default(value='') }}"></label>
+            <label>Auteur: <input type="text" name="author" value="{{ book.author }}" required></label>
+            <label>Année: <input type="number" name="year" value="{{ book.year }}" required></label>
+            <label>Description: <textarea name="description">{{ book.description }}</textarea></label>
+            <button type="submit" class="btn">Sauvegarder</button>
+        </form>
+    </div>
+{% endblock content %}

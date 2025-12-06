@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bibliothèque{% endblock %}</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #333;
+            --input-bg: #2d2d2d;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        a {
+            color: var(--secondary-color);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        a:hover {
+            color: #fff;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: #000;
+            border-radius: 5px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #a370f7;
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--secondary-color);
+            color: var(--secondary-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--secondary-color);
+            color: #000;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-color);
+            box-sizing: border-box; /* Fix padding issues */
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .card {
+            background-color: var(--surface-color);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        nav {
+            background-color: var(--surface-color);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav a.logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        nav .links a {
+            margin-left: 20px;
+            font-weight: 500;
+        }
+
+        /* Responsive Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            nav { flex-direction: column; padding: 10px; }
+            nav .links { margin-top: 10px; }
+            nav .links a { margin: 0 10px; }
+            
+            .hide-mobile { display: none; }
+            
+            /* Card view for table rows on mobile */
+            table, thead, tbody, th, td, tr { 
+                display: block; 
+            }
+            thead tr { 
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            tr { border: 1px solid var(--border-color); margin-bottom: 10px; border-radius: 8px; overflow: hidden; }
+            td { 
+                border: none;
+                border-bottom: 1px solid #333; 
+                position: relative;
+                padding-left: 50%; 
+            }
+            td:before { 
+                position: absolute;
+                top: 12px;
+                left: 12px;
+                width: 45%; 
+                padding-right: 10px; 
+                white-space: nowrap;
+                color: var(--text-muted);
+                content: attr(data-label);
+            }
+        }
+        
+        details {
+            margin-bottom: 10px;
+            background: var(--surface-color);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        details summary {
+            padding: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            background: #252525;
+            list-style: none; /* Hide default arrow */
+        }
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+        details summary::after {
+            content: '+'; 
+            float: right;
+            font-weight: bold;
+        }
+        details[open] summary::after {
+            content: '-';
+        }
+        .series-content {
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/list" class="logo">📚 Bibliothèque</a>
+        <div class="links">
+            <a href="/list">Liste</a>
+            <a href="/add">Ajouter</a>
+            {% if is_debug %}
+                 <form action="/shutdown" method="post" style="display:inline; margin-left: 10px;">
+                    <button type="submit" class="btn" style="background-color: #cf6679; padding: 5px 10px; font-size: 0.8em;">Stop Serveur</button>
+                 </form>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock content %}
+    </div>
+
+    {% block scripts %}{% endblock scripts %}
+</body>
+</html>

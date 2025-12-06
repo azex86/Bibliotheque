@@ -1,0 +1,223 @@
+{% extends "base" %}
+
+{% block title %}Ajouter une oeuvre{% endblock title %}
+
+{% block content %}
+    <div class="tabs" style="margin-bottom: 20px; display: flex; border-bottom: 2px solid var(--border-color);">
+        <div class="tab active" onclick="openTab('simple')" style="padding: 10px 20px; cursor: pointer; border-bottom: 2px solid var(--primary-color); color: var(--text-color);">Simple</div>
+        <div class="tab" onclick="openTab('collection')" style="padding: 10px 20px; cursor: pointer; color: var(--text-muted);">Collection</div>
+        <div class="tab" onclick="openTab('bulk')" style="padding: 10px 20px; cursor: pointer; color: var(--text-muted);">Multiple</div>
+        <div class="tab" onclick="openTab('scan')" style="padding: 10px 20px; cursor: pointer; color: var(--text-muted);">Scan (Photo)</div>
+    </div>
+
+    <!-- SIMPLE ADD -->
+    <div id="simple" class="tab-content active">
+        <div class="card">
+            <h2>Ajout Simple</h2>
+            <form action="/add" method="post">
+                <label>Série (Optionnel): <input type="text" name="series" placeholder="Ex: Harry Potter"></label>
+                <label>Titre: <input type="text" name="title" required></label>
+                <label>Sous-titre (Optionnel): <input type="text" name="subtitle" placeholder="Ex: à l'école des sorciers"></label>
+                <label>Auteur: <input type="text" name="author" required></label>
+                <label>Année: <input type="number" name="year" required></label>
+                <label>Description: <textarea name="description"></textarea></label>
+                <button type="submit" class="btn">Ajouter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- COLLECTION ADD -->
+    <div id="collection" class="tab-content" style="display:none;">
+        <div class="card">
+            <h2>Ajouter une Collection</h2>
+            <p style="color: var(--text-muted);">Génère automatiquement des volumes pour une série.</p>
+            <form action="/add/collection" method="post">
+                <label>Titre de la série: <input type="text" name="series_title" placeholder="Ex: One Piece" required></label>
+                <label>Modèle de sous-titre (Optionnel): <input type="text" name="subtitle_template" placeholder="Ex: Arc Skypiea"></label>
+                <label>Auteur: <input type="text" name="author" required></label>
+                <div style="display: flex; gap: 20px;">
+                    <label style="flex:1">Vol. Début: <input type="number" name="start_vol" value="1" required></label>
+                    <label style="flex:1">Vol. Fin: <input type="number" name="end_vol" required></label>
+                </div>
+                <label>Année: <input type="number" name="year" required></label>
+                <label>Description: <textarea name="description"></textarea></label>
+                <button type="submit" class="btn">Générer et Ajouter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCAN ADD -->
+    <div id="scan" class="tab-content" style="display:none;">
+        <div class="card">
+            <h2>Ajouter par Photo</h2>
+            <p>Prenez une photo de la couverture ou importez une image.</p>
+            
+            <input type="file" id="scan-input" accept="image/*" capture="environment" onchange="handleImage(this)">
+            
+            <div style="margin: 20px 0; text-align: center; display: none;" id="preview-container">
+                <img id="scan-preview" style="max-width: 100%; max-height: 300px; border-radius: 5px;">
+                <br>
+                <div id="loading-ocr" style="display: none; color: var(--secondary-color); margin-top: 10px;">Traitement en cours... <span id="progress-ocr"></span></div>
+            </div>
+
+            <div id="scan-results" style="display: none;">
+                <h3>Texte Détecté</h3>
+                <textarea id="detected-text" rows="5" placeholder="Le texte détecté apparaîtra ici..."></textarea>
+                
+                <p style="font-size: 0.9em; color: var(--text-muted);">Vérifiez et transférez.</p>
+                <button type="button" class="btn" onclick="fillSimpleForm()">Remplir le Formulaire Simple</button>
+            </div>
+        </div>
+    </div>
+{% endblock content %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+    function openTab(tabName) {
+        document.querySelectorAll('.tab').forEach(t => {
+            t.style.borderBottom = 'none';
+            t.style.color = 'var(--text-muted)';
+            t.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        
+        const activeTab = document.querySelector(`.tab[onclick="openTab('${tabName}')"]`);
+        activeTab.style.borderBottom = '2px solid var(--primary-color)';
+        activeTab.style.color = 'var(--text-color)';
+        activeTab.classList.add('active');
+        
+        document.getElementById(tabName).style.display = 'block';
+    }
+
+    async function handleImage(input) {
+        if (!input.files || !input.files[0]) return;
+        
+        const file = input.files[0];
+        const preview = document.getElementById('scan-preview');
+        const container = document.getElementById('preview-container');
+        const loading = document.getElementById('loading-ocr');
+        const results = document.getElementById('scan-results');
+        const textarea = document.getElementById('detected-text');
+
+        // Show preview
+        preview.src = URL.createObjectURL(file);
+        container.style.display = 'block';
+        loading.style.display = 'block';
+        results.style.display = 'none';
+        textarea.value = "";
+
+        try {
+            const worker = await Tesseract.createWorker({
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        document.getElementById('progress-ocr').innerText = `${Math.round(m.progress * 100)}%`;
+                    }
+                }
+            });
+            
+            await worker.loadLanguage('eng+fra');
+            await worker.initialize('eng+fra');
+            const { data: { text } } = await worker.recognize(file);
+            
+            textarea.value = text;
+            results.style.display = 'block';
+            await worker.terminate();
+        } catch (e) {
+            console.error(e);
+            alert("Erreur OCR: " + e.message);
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+
+    function fillSimpleForm() {
+        const text = document.getElementById('detected-text').value;
+        const lines = text.split('\n').filter(l => l.trim() !== '');
+
+        if (lines.length > 0) {
+            // Heuristic: First line is title, Second is line author... very basic.
+            // Let's try to be smart or just dump it for user to edit.
+            // For now: Title = Line 1. Author = Line 2.
+            
+            // Switch to simple tab
+            openTab('simple');
+
+            const form = document.querySelector('#simple form');
+            if (lines[0]) form.title.value = lines[0];
+            if (lines[1]) {
+                // If line 1 contains "by", maybe split?
+                form.author.value = lines[1];
+            }
+            form.year.value = new Date().getFullYear(); // Default
+            form.description.value = text; // Dump full text in description for reference
+        }
+    }
+    
+    function addBulkRow() {
+        const container = document.getElementById('bulk-container');
+        const div = document.createElement('div');
+        div.className = 'bulk-row';
+        div.style.borderBottom = "1px solid var(--border-color)";
+        div.style.marginBottom = "15px";
+        div.style.paddingBottom = "15px";
+        div.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" placeholder="Série" class="bulk-series">
+                <input type="text" placeholder="Titre" class="bulk-title" required>
+            </div>
+            <input type="text" placeholder="Sous-titre" class="bulk-subtitle">
+            <div style="display: grid; grid-template-columns: 1fr 100px; gap: 10px;">
+                <input type="text" placeholder="Auteur" class="bulk-author" required>
+                <input type="number" placeholder="Année" class="bulk-year" required>
+            </div>
+            <button type="button" class="btn-outline" style="color: #cf6679; border-color: #cf6679;" onclick="this.parentElement.remove()">Retirer</button>
+        `;
+        container.appendChild(div);
+    }
+
+    async function submitBulk() {
+        const rows = document.querySelectorAll('.bulk-row');
+        const books = [];
+        for (let row of rows) {
+            const title = row.querySelector('.bulk-title').value;
+            const author = row.querySelector('.bulk-author').value;
+            const year = row.querySelector('.bulk-year').value;
+            const series = row.querySelector('.bulk-series').value;
+            const subtitle = row.querySelector('.bulk-subtitle').value;
+
+            if (title && author && year) {
+                books.push({
+                    title, author, series, subtitle,
+                    year: parseInt(year), 
+                    description: null
+                });
+            }
+        }
+
+        if (books.length === 0) {
+            alert("Aucune donnée.");
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/add/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(books)
+            });
+
+            if (response.ok) {
+                window.location.href = '/list';
+            } else {
+                alert("Erreur.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Erreur réseau.");
+        }
+    }
+    
+    addBulkRow();
+</script>
+{% endblock scripts %}

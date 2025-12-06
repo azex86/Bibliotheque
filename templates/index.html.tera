@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bibliothèque</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; }
+        a { display: inline-block; margin-right: 15px; text-decoration: none; color: #007bff; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Bienvenue à la Bibliothèque</h1>
+    <nav>
+        <a href="/add">Ajouter une oeuvre</a>
+        <a href="/list">Liste des oeuvres</a>
+    </nav>
+</body>
+</html>

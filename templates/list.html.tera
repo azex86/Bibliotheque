@@ -1,0 +1,59 @@
+{% extends "base" %}
+
+{% block title %}Liste des oeuvres{% endblock title %}
+
+{% block content %}
+    <h1>Liste des oeuvres</h1>
+
+    <!-- Group books by series -->
+    {% set_global current_series = "" %}
+    {% set_global in_series = false %}
+
+    <!-- Since we can't easily preprocess in Tera, we'll iterate. 
+         Ideally the backend should group them, but we can do it visually here if sorted. -->
+    
+    <div class="list-view">
+        <table class="card">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th class="hide-mobile">Auteur</th>
+                    <th>Année</th>
+                    <th class="hide-mobile">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for book in books %}
+                <tr>
+                    <td data-label="Titre">
+                        {% if book.series %}
+                            <span style="color: var(--secondary-color); font-size: 0.8em; display: block;">{{ book.series }}</span>
+                        {% endif %}
+                        <strong>{{ book.title }}</strong>
+                        {% if book.volume_number %}
+                            <span style="color: var(--text-color); font-weight: bold;">#{{ book.volume_number }}</span>
+                        {% endif %}
+                        {% if book.subtitle %}
+                            <br><span style="color: var(--text-muted); font-size: 0.9em;">- {{ book.subtitle }}</span>
+                        {% endif %}
+                        <div class="hide-desktop" style="margin-top: 5px;">
+                            <span style="font-size: 0.8em; color: #888;">{{ book.author }}</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile" data-label="Auteur">{{ book.author }}</td>
+                    <td data-label="Année">{{ book.year }}</td>
+                    <td data-label="Action">
+                        <a href="/edit/{{ book.id }}" class="btn-outline" style="padding: 5px 10px; font-size: 0.8em;">Éditer</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 
+       Note: True "Accordion" grouping requires structuring the data as Series -> [Books] 
+       in Rust before passing to template.
+       For now, we display Series name above title.
+    -->
+{% endblock content %}

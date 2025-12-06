@@ -1,0 +1,2 @@
+ALTER TABLE books ADD COLUMN series TEXT;
+ALTER TABLE books ADD COLUMN subtitle TEXT;
