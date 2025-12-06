@@ -5,55 +5,96 @@
 {% block content %}
     <h1>Liste des oeuvres</h1>
 
-    <!-- Group books by series -->
-    {% set_global current_series = "" %}
-    {% set_global in_series = false %}
-
-    <!-- Since we can't easily preprocess in Tera, we'll iterate. 
-         Ideally the backend should group them, but we can do it visually here if sorted. -->
-    
-    <div class="list-view">
-        <table class="card">
-            <thead>
-                <tr>
-                    <th>Titre</th>
-                    <th class="hide-mobile">Auteur</th>
-                    <th>Année</th>
-                    <th class="hide-mobile">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for book in books %}
-                <tr>
-                    <td data-label="Titre">
-                        {% if book.series %}
-                            <span style="color: var(--secondary-color); font-size: 0.8em; display: block;">{{ book.series }}</span>
-                        {% endif %}
-                        <strong>{{ book.title }}</strong>
-                        {% if book.volume_number %}
-                            <span style="color: var(--text-color); font-weight: bold;">#{{ book.volume_number }}</span>
-                        {% endif %}
-                        {% if book.subtitle %}
-                            <br><span style="color: var(--text-muted); font-size: 0.9em;">- {{ book.subtitle }}</span>
-                        {% endif %}
-                        <div class="hide-desktop" style="margin-top: 5px;">
-                            <span style="font-size: 0.8em; color: #888;">{{ book.author }}</span>
-                        </div>
-                    </td>
-                    <td class="hide-mobile" data-label="Auteur">{{ book.author }}</td>
-                    <td data-label="Année">{{ book.year }}</td>
-                    <td data-label="Action">
-                        <a href="/edit/{{ book.id }}" class="btn-outline" style="padding: 5px 10px; font-size: 0.8em;">Éditer</a>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <form action="/list" method="get" style="flex: 1; display: flex; gap: 10px;">
+            <input type="text" name="q" value="{{ search_query | default(value='') }}" placeholder="Rechercher (titre, auteur)..." style="flex: 1;">
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+            <button type="submit" class="btn">Rechercher</button>
+        </form>
+        <div class="sort-links">
+            <span>Grouper par:</span>
+            <a href="/list?sort=title&q={{ search_query | default(value='') }}" class="{% if current_sort == 'title' %}active{% endif %}">Titre</a>
+            <a href="/list?sort=author&q={{ search_query | default(value='') }}" class="{% if current_sort == 'author' %}active{% endif %}">Auteur</a>
+        </div>
     </div>
 
-    <!-- 
-       Note: True "Accordion" grouping requires structuring the data as Series -> [Books] 
-       in Rust before passing to template.
-       For now, we display Series name above title.
-    -->
+    <!-- Book List -->
+    <div class="book-list">
+        {% set current_group = "" %}
+        
+        {% for book in books %}
+            
+            {% if current_sort == 'title' %}
+                {% set group_key = book.title %}
+                {% if group_key != current_group %}
+                    <h3 class="group-header">{{ group_key }}</h3>
+                    {% set_global current_group = group_key %}
+                {% endif %}
+            {% elif current_sort == 'author' %}
+                {% set group_key = book.author %}
+                {% if group_key != current_group %}
+                    <h3 class="group-header">{{ group_key }}</h3>
+                    {% set_global current_group = group_key %}
+                {% endif %}
+            {% endif %}
+
+            <div class="book-card">
+                <div class="book-info">
+                    {% if current_sort == 'title' %}
+                        <!-- If grouped by title (series), show subtitle (volume name) as main info inside card -->
+                        {% if book.subtitle %}
+                            <strong>{{ book.subtitle }}</strong>
+                        {% else %}
+                             <!-- If no subtitle, it's likely a standalone or the series name itself is the title -->
+                             <span style="color: var(--text-color);">{{ book.title }}</span>
+                        {% endif %}
+                    {% else %}
+                         <strong>{{ book.title }}</strong>
+                    {% endif %}
+
+                    {% if book.volume_number %}
+                        <span class="vol-badge">#{{ book.volume_number }}</span>
+                    {% endif %}
+                    
+                    {% if current_sort != 'title' and book.subtitle %}
+                         <div class="subtitle">{{ book.subtitle }}</div>
+                    {% endif %}
+
+                    <div class="meta">
+                        {% if current_sort != 'author' %}{{ book.author }} • {% endif %}
+                        {{ book.year | default(value="S.D.") }}
+                    </div>
+                </div>
+                <div class="book-actions">
+                     <a href="/edit/{{ book.id }}">Éditer</a>
+                </div>
+            </div>
+        {% else %}
+            <p>Aucun livre trouvé.</p>
+        {% endfor %}
+    </div>
+
+    <style>
+        .group-header {
+            margin-top: 30px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--secondary-color);
+            color: var(--secondary-color);
+        }
+        .sort-links a {
+            margin-left: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+        .sort-links a.active {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        .subtitle { font-style: italic; color: var(--text-muted); font-size: 0.9em; }
+        .vol-badge { background: var(--surface-color); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; margin-left: 5px; }
+        .book-list { display: grid; gap: 10px; }
+        .book-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+        .book-actions a { color: var(--primary-color); text-decoration: none; }
+    </style>
 {% endblock content %}

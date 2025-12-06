@@ -8,7 +8,6 @@
     <div class="card">
         <h1>Édition</h1>
         <form action="/edit/{{ book.id }}" method="post">
-            <label>Série: <input type="text" name="series" value="{{ book.series | default(value='') }}"></label>
             <div style="display: flex; gap: 20px;">
                 <label style="flex: 2;">Titre: <input type="text" name="title" value="{{ book.title }}" required></label>
                 <label style="flex: 1;">Volume #: <input type="number" name="volume_number" value="{{ book.volume_number | default(value='') }}"></label>

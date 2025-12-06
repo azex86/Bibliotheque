@@ -9,9 +9,8 @@ pub struct Book {
     pub title: String,
     pub subtitle: Option<String>,
     pub author: String,
-    pub year: i64,
+    pub year: Option<i64>,
     pub description: Option<String>,
-    pub series: Option<String>,
     pub volume_number: Option<i64>,
 }
 
@@ -21,8 +20,7 @@ pub struct BookForm {
     pub title: String,
     pub subtitle: Option<String>,
     pub author: String,
-    pub year: i64,
+    pub year: Option<i64>,
     pub description: Option<String>,
-    pub series: Option<String>,
     pub volume_number: Option<i64>,
 }

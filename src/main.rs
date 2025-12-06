@@ -1,4 +1,5 @@
 #[macro_use] extern crate rocket;
+// Force recompile 1
 
 mod models;
 mod routes;
@@ -23,11 +24,24 @@ fn rocket() -> _ {
     let db_shm = "bibliotheque.db-shm";
     let db_wal = "bibliotheque.db-wal";
 
+    if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
+        println!("Bibliotheque - Gestionnaire de livres personnel");
+        println!("Usage: cargo run -- [OPTIONS]");
+        println!();
+        println!("Options:");
+        println!("  --port, -p   Specify server port (default: 8000)");
+        println!("  --create     Ensure database exists (runs migrations)");
+        println!("  --recreate   Wipe and rebuild database (DESTRUCTIVE: deletes all data)");
+        println!("  --purge      Delete database files and exit");
+        println!("  --help, -h   Show this help message");
+        std::process::exit(0);
+    }
+
     if args.contains(&"--purge".to_string()) || args.contains(&"--recreate".to_string()) {
         println!("Removing database files...");
-        let _ = fs::remove_file(db_path);
-        let _ = fs::remove_file(db_shm);
-        let _ = fs::remove_file(db_wal);
+        if Path::new(db_path).exists() { let _ = fs::remove_file(db_path); }
+        if Path::new(db_shm).exists() { let _ = fs::remove_file(db_shm); }
+        if Path::new(db_wal).exists() { let _ = fs::remove_file(db_wal); }
         println!("Database removed.");
         
         if args.contains(&"--purge".to_string()) {
@@ -39,7 +53,29 @@ fn rocket() -> _ {
         println!("Ensuring database exists...");
     }
 
-    let mut app = rocket::build()
+    let mut port_override = None;
+    let mut i = 0;
+    while i < args.len() {
+        if args[i] == "--port" || args[i] == "-p" {
+            if i + 1 < args.len() {
+                if let Ok(p) = args[i+1].parse::<u16>() {
+                    port_override = Some(p);
+                } else {
+                    eprintln!("Error: Invalid port number");
+                    std::process::exit(1);
+                }
+            }
+            i += 1;
+        }
+        i += 1;
+    }
+
+    let mut figment = rocket::Config::figment();
+    if let Some(port) = port_override {
+        figment = figment.merge(("port", port));
+    }
+
+    let mut app = rocket::custom(figment)
         .attach(Db::init())
         .attach(AdHoc::try_on_ignite("SQLx Migrations", |rocket| async {
             let Some(db) = Db::fetch(&rocket) else {
@@ -60,12 +96,10 @@ fn rocket() -> _ {
             routes::index,
             routes::add_book_form,
             routes::add_book,
-            routes::index,
-            routes::add_book_form,
-            routes::add_book,
             routes::list_books,
             routes::edit_book_form,
-            routes::edit_book
+            routes::edit_book,
+            routes::get_metadata
         ]);
 
     #[cfg(debug_assertions)]

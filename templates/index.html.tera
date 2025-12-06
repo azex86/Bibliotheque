@@ -1,20 +1,29 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Bibliothèque</title>
+{% extends "base" %}
+
+{% block title %}Accueil - Bibliothèque{% endblock title %}
+
+{% block content %}
+    <div style="text-align: center; padding: 50px 0;">
+        <h1 style="font-size: 3em; margin-bottom: 20px;">Bienvenue à la Bibliothèque</h1>
+        <p style="font-size: 1.2em; color: var(--text-muted); margin-bottom: 40px;">Gérez votre collection de livres simplement et efficacement.</p>
+        
+        <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+            <a href="/list" class="card" style="text-decoration: none; color: var(--text-color); width: 250px; transition: transform 0.2s;">
+                <h2 style="color: var(--secondary-color);">📚 Liste</h2>
+                <p>Consultez et recherchez vos oeuvres.</p>
+            </a>
+            
+            <a href="/add" class="card" style="text-decoration: none; color: var(--text-color); width: 250px; transition: transform 0.2s;">
+                <h2 style="color: var(--primary-color);">➕ Ajouter</h2>
+                <p>Ajoutez de nouvelles acquisitions.</p>
+            </a>
+        </div>
+    </div>
+
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        h1 { color: #333; }
-        a { display: inline-block; margin-right: 15px; text-decoration: none; color: #007bff; }
-        a:hover { text-decoration: underline; }
+        .card:hover {
+            transform: translateY(-5px);
+            background-color: #2c2c2c;
+        }
     </style>
-</head>
-<body>
-    <h1>Bienvenue à la Bibliothèque</h1>
-    <nav>
-        <a href="/add">Ajouter une oeuvre</a>
-        <a href="/list">Liste des oeuvres</a>
-    </nav>
-</body>
-</html>
+{% endblock content %}
