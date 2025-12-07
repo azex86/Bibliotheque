@@ -22,7 +22,7 @@
 
     <!-- ADD FORM -->
     <div class="card">
-        <form action="/add" method="post" id="add-form" autocomplete="off">
+        <form action="/add" method="post" id="add-form" autocomplete="off" enctype="multipart/form-data">
             <div style="display: flex; gap: 20px;">
                 <div style="flex: 2; position:relative;">
                      <label>Titre (Série ou Oeuvre): <input type="text" name="title" id="title-input" value="{{ form.title | default(value='') }}" required oninput="suggest(this, 'title')"></label>
@@ -37,6 +37,13 @@
             
             <label>Année (Optionnel): <input type="number" name="year" value="{{ form.year | default(value='') }}"></label>
             <label>Description: <textarea name="description">{{ form.description | default(value='') }}</textarea></label>
+            
+            <label style="display: flex; flex-direction: column; gap: 5px;">
+                Image de couverture (Optionnel):
+                <p style="font-size: 0.85em; color: var(--text-muted); margin: 0;">Note: Les images HEIC ne sont pas supportées. Veuillez convertir en JPG/PNG d'abord.</p>
+                <input type="file" name="cover" accept="image/jpeg,image/png,image/gif,image/webp" style="padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 5px;">
+            </label>
+            
             <button type="submit" class="btn">Ajouter</button>
         </form>
     </div>
@@ -47,9 +54,21 @@
             <h2>Scanner une couverture</h2>
             <button onclick="toggleScan()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">X</button>
         </div>
-        <p>Prenez une photo de la couverture ou importez une image.</p>
+        <p style="text-align: center; margin-bottom: 20px;">Choisissez une méthode :</p>
         
-        <input type="file" id="scan-input" accept="image/*" capture="environment" onchange="handleImage(this)">
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <!-- Camera Button -->
+            <label class="btn" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <span>📷</span> Prendre une Photo
+                <input type="file" id="scan-camera" accept="image/*" capture="environment" onchange="handleImage(this)" style="display: none;">
+            </label>
+            
+            <!-- Gallery Button -->
+            <label class="btn-outline" style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05);">
+                <span>🖼️</span> Importer une Image
+                <input type="file" id="scan-gallery" accept="image/*" onchange="handleImage(this)" style="display: none;">
+            </label>
+        </div>
         
         <div style="margin: 20px 0; text-align: center; display: none;" id="preview-container">
             <img id="scan-preview" style="max-width: 100%; max-height: 300px; border-radius: 5px;">
@@ -230,8 +249,36 @@
 
         } catch (e) {
             console.error(e);
-            logDebug("ERREUR: " + e.message);
-            alert("Erreur OCR: " + e.message);
+            logDebug("ERREUR Local: " + e.message);
+            
+            // FALLBACK TO SERVER
+            if (e.success === undefined || e.toString().includes('undefined') || true) { // Force fallback on error
+                 logDebug("Tentative via le serveur...");
+                 try {
+                     const formData = new FormData();
+                     formData.append('file', file);
+                     
+                     const response = await fetch('/api/scan', {
+                         method: 'POST',
+                         body: formData
+                     });
+                     
+                     if (response.ok) {
+                         const serverText = await response.text();
+                         logDebug("Succès Serveur !");
+                         textarea.value = serverText;
+                         results.style.display = 'block';
+                         fillSimpleForm(true);
+                     } else {
+                         throw new Error("Erreur serveur: " + response.statusText);
+                     }
+                 } catch (serverErr) {
+                     logDebug("ECHEC Serveur: " + serverErr.message);
+                     alert("Échec de l'analyse (Locale et Serveur).");
+                 }
+            } else {
+                alert("Erreur OCR: " + e.message);
+            }
         } finally {
             loading.style.display = 'none';
         }

@@ -7,6 +7,75 @@ use crate::models::{Book, BookForm};
 use crate::Db;
 
 
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
+use rocket::fs::TempFile;
+
+// Helper to save file with unique name
+async fn save_cover(mut file: TempFile<'_>) -> Option<String> {
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let filename = format!("cover_{}.jpg", timestamp);
+    let path = Path::new("uploads").join(&filename);
+    let temp_path = Path::new("uploads").join(format!("temp_{}", timestamp));
+    
+    // Ensure dir exists
+    let _ = std::fs::create_dir_all("uploads");
+
+    // First, copy the uploaded file to a temp location
+    if let Err(e) = file.copy_to(&temp_path).await {
+        eprintln!("Failed to copy temp file: {}", e);
+        return None;
+    }
+
+    // Try to open and convert the image to JPEG
+    match image::io::Reader::open(&temp_path) {
+        Ok(reader) => {
+            match reader.with_guessed_format() {
+                Ok(reader_with_format) => {
+                    // Check if format is supported
+                    if let Some(format) = reader_with_format.format() {
+                        eprintln!("Image format detected: {:?}", format);
+                    }
+                    
+                    match reader_with_format.decode() {
+                        Ok(img) => {
+                            // Convert to RGB8 and save as JPEG
+                            match img.to_rgb8().save_with_format(&path, image::ImageFormat::Jpeg) {
+                                Ok(_) => {
+                                    // Clean up temp file
+                                    let _ = std::fs::remove_file(&temp_path);
+                                    Some(format!("/uploads/{}", filename))
+                                },
+                                Err(e) => {
+                                    eprintln!("Failed to save as JPEG: {}", e);
+                                    let _ = std::fs::remove_file(&temp_path);
+                                    None
+                                }
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Failed to decode image: {}", e);
+                            let _ = std::fs::remove_file(&temp_path);
+                            None
+                        }
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Failed to guess image format: {}", e);
+                    let _ = std::fs::remove_file(&temp_path);
+                    None
+                }
+            }
+        },
+        Err(e) => {
+            eprintln!("Failed to open image file: {}", e);
+            let _ = std::fs::remove_file(&temp_path);
+            None
+        }
+    }
+}
+
+
 #[get("/")]
 pub async fn index() -> Template {
     Template::render("index", context! { is_debug: cfg!(debug_assertions) })
@@ -18,10 +87,29 @@ pub async fn add_book_form() -> Template {
 }
 
 #[post("/add", data = "<form>")]
-pub async fn add_book(mut db: Connection<Db>, form: Form<BookForm>) -> Template {
+pub async fn add_book(mut db: Connection<Db>, mut form: Form<BookForm<'_>>) -> Template {
+    eprintln!("DEBUG: Received form submission");
+    
+    let cover_path = if let Some(file) = form.cover.take() {
+        eprintln!("DEBUG: File present, length: {}", file.len());
+        if file.len() > 0 {
+            let saved_path = save_cover(file).await;
+            eprintln!("DEBUG: Saved path: {:?}", saved_path);
+            saved_path
+        } else {
+            eprintln!("DEBUG: File length is 0");
+            None
+        }
+    } else {
+        eprintln!("DEBUG: No file in form");
+        None
+    };
+
+    eprintln!("DEBUG: Final cover_path: {:?}", cover_path);
+
     let book = form.into_inner();
     let result = sqlx::query(
-        "INSERT INTO books (title, subtitle, author, year, description, volume_number) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO books (title, subtitle, author, year, description, volume_number, cover_path) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(&book.title)
     .bind(&book.subtitle)
@@ -29,18 +117,17 @@ pub async fn add_book(mut db: Connection<Db>, form: Form<BookForm>) -> Template 
     .bind(book.year)
     .bind(&book.description)
     .bind(book.volume_number)
+    .bind(&cover_path)
     .execute(&mut **db)
     .await;
 
     match result {
         Ok(_) => Template::render("add", context! { 
             message: "Livre ajouté avec succès !",
-            form: book,
             is_debug: cfg!(debug_assertions)
         }),
         Err(e) => Template::render("add", context! { 
             error: e.to_string(),
-            form: book,
             is_debug: cfg!(debug_assertions)
         })
     }
@@ -50,7 +137,7 @@ pub async fn add_book(mut db: Connection<Db>, form: Form<BookForm>) -> Template 
 
 #[get("/edit/<id>")]
 pub async fn edit_book_form(mut db: Connection<Db>, id: i64) -> Result<Template, Status> {
-    let book = sqlx::query_as::<_, Book>("SELECT id, title, subtitle, author, year, description, volume_number FROM books WHERE id = ?")
+    let book = sqlx::query_as::<_, Book>("SELECT id, title, subtitle, author, year, description, volume_number, cover_path FROM books WHERE id = ?")
         .bind(id)
         .fetch_one(&mut **db)
         .await
@@ -60,26 +147,54 @@ pub async fn edit_book_form(mut db: Connection<Db>, id: i64) -> Result<Template,
 }
 
 #[post("/edit/<id>", data = "<form>")]
-pub async fn edit_book(mut db: Connection<Db>, id: i64, form: Form<BookForm>) -> Result<Redirect, Status> {
+pub async fn edit_book(mut db: Connection<Db>, id: i64, mut form: Form<BookForm<'_>>) -> Result<Redirect, Status> {
+    // Handle cover image if provided
+    let cover_path = if let Some(file) = form.cover.take() {
+        if file.len() > 0 {
+            save_cover(file).await
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let book = form.into_inner();
-    sqlx::query("UPDATE books SET title = ?, subtitle = ?, author = ?, year = ?, description = ?, volume_number = ? WHERE id = ?")
-        .bind(book.title)
-        .bind(book.subtitle)
-        .bind(book.author)
-        .bind(book.year)
-        .bind(book.description)
-        .bind(book.volume_number)
-        .bind(id)
-        .execute(&mut **db)
-        .await
-        .map_err(|_| Status::InternalServerError)?;
+    
+    // Update query - only update cover_path if a new image was uploaded
+    if let Some(new_cover_path) = cover_path {
+        sqlx::query("UPDATE books SET title = ?, subtitle = ?, author = ?, year = ?, description = ?, volume_number = ?, cover_path = ? WHERE id = ?")
+            .bind(book.title)
+            .bind(book.subtitle)
+            .bind(book.author)
+            .bind(book.year)
+            .bind(book.description)
+            .bind(book.volume_number)
+            .bind(new_cover_path)
+            .bind(id)
+            .execute(&mut **db)
+            .await
+            .map_err(|_| Status::InternalServerError)?;
+    } else {
+        sqlx::query("UPDATE books SET title = ?, subtitle = ?, author = ?, year = ?, description = ?, volume_number = ? WHERE id = ?")
+            .bind(book.title)
+            .bind(book.subtitle)
+            .bind(book.author)
+            .bind(book.year)
+            .bind(book.description)
+            .bind(book.volume_number)
+            .bind(id)
+            .execute(&mut **db)
+            .await
+            .map_err(|_| Status::InternalServerError)?;
+    }
 
     Ok(Redirect::to("/list"))
 }
 
 #[get("/list?<q>&<sort>")]
 pub async fn list_books(mut db: Connection<Db>, q: Option<String>, sort: Option<String>) -> Result<Template, String> {
-    let mut query_str = String::from("SELECT id, title, subtitle, author, year, description, volume_number FROM books");
+    let mut query_str = String::from("SELECT id, title, subtitle, author, year, description, volume_number, cover_path FROM books");
     
     if let Some(ref search) = q {
         if !search.is_empty() {
@@ -110,9 +225,54 @@ pub async fn list_books(mut db: Connection<Db>, q: Option<String>, sort: Option<
     }))
 }
 
+#[derive(FromForm)]
+pub struct ScanUpload<'r> {
+    file: TempFile<'r>,
+}
+
+#[post("/api/scan", data = "<upload>")]
+pub async fn scan_image(mut upload: Form<ScanUpload<'_>>) -> Result<String, Status> {
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let temp_path = Path::new("uploads").join(format!("temp_ocr_{}.png", timestamp));
+    let _ = std::fs::create_dir_all("uploads");
+
+    if let Err(e) = upload.file.persist_to(&temp_path).await {
+        eprintln!("Failed to save temp file for OCR: {}", e);
+        return Err(Status::InternalServerError);
+    }
+
+    // Call Tesseract
+    let output = std::process::Command::new("tesseract")
+        .arg(&temp_path)
+        .arg("stdout") // print to stdout
+        .arg("-l")
+        .arg("eng+fra")
+        .output();
+    
+    // Clean up temp file
+    let _ = std::fs::remove_file(&temp_path);
+
+    match output {
+        Ok(o) => {
+            if o.status.success() {
+                let text = String::from_utf8_lossy(&o.stdout).to_string();
+                Ok(text)
+            } else {
+                eprintln!("Tesseract Error: {}", String::from_utf8_lossy(&o.stderr));
+                Err(Status::InternalServerError)
+            }
+        },
+        Err(e) => {
+            eprintln!("Failed to execute tesseract: {}", e);
+            // This likely means tesseract is not installed
+            Err(Status::ServiceUnavailable)
+        }
+    }
+}
+
 #[get("/api/books/metadata")]
 pub async fn get_metadata(mut db: Connection<Db>) -> Json<Vec<Book>> {
-    let books = sqlx::query_as::<_, Book>("SELECT id, title, subtitle, author, year, description, volume_number FROM books")
+    let books = sqlx::query_as::<_, Book>("SELECT id, title, subtitle, author, year, description, volume_number, cover_path FROM books")
         .fetch_all(&mut **db)
         .await
         .unwrap_or_default();
