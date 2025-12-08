@@ -1,4 +1,4 @@
-use rocket::serde::{Serialize, Deserialize};
+use rocket::serde::{Serialize};
 use sqlx::FromRow;
 use rocket::form::FromForm;
 use rocket::fs::TempFile;

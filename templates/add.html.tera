@@ -3,10 +3,7 @@
 {% block title %}Ajouter une oeuvre{% endblock title %}
 
 {% block content %}
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h1>Ajouter une oeuvre</h1>
-        <button onclick="toggleScan()" class="btn-outline">Scan (Photo)</button>
-    </div>
+    <h1 style="margin-bottom: 20px;">Ajouter une oeuvre</h1>
 
     {% if message %}
         <div style="background-color: rgba(3, 218, 198, 0.2); border: 1px solid var(--secondary-color); padding: 10px; border-radius: 5px; margin-bottom: 20px;">
@@ -48,51 +45,7 @@
         </form>
     </div>
 
-    <!-- SCAN MODAL / SECTION -->
-    <div id="scan-section" class="card" style="display:none; margin-top: 20px; border: 1px solid var(--secondary-color);">
-        <div style="display:flex; justify-content:space-between;">
-            <h2>Scanner une couverture</h2>
-            <button onclick="toggleScan()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">X</button>
-        </div>
-        <p style="text-align: center; margin-bottom: 20px;">Choisissez une méthode :</p>
-        
-        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-            <!-- Camera Button -->
-            <label class="btn" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                <span>📷</span> Prendre une Photo
-                <input type="file" id="scan-camera" accept="image/*" capture="environment" onchange="handleImage(this)" style="display: none;">
-            </label>
-            
-            <!-- Gallery Button -->
-            <label class="btn-outline" style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05);">
-                <span>🖼️</span> Importer une Image
-                <input type="file" id="scan-gallery" accept="image/*" onchange="handleImage(this)" style="display: none;">
-            </label>
-        </div>
-        
-        <div style="margin: 20px 0; text-align: center; display: none;" id="preview-container">
-            <img id="scan-preview" style="max-width: 100%; max-height: 300px; border-radius: 5px;">
-            <br>
-            <div id="loading-ocr" style="display: none; width: 100%; margin-top: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px; color: var(--secondary-color);">
-                    <span>Analyse en cours...</span>
-                    <span id="progress-text">0%</span>
-                </div>
-                <progress id="ocr-progressbar" value="0" max="100" style="width: 100%; height: 10px;"></progress>
-                <div id="debug-log" style="font-family: monospace; font-size: 0.8em; color: var(--text-muted); margin-top: 10px; height: 60px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 5px; text-align: left;">
-                    En attente...
-                </div>
-            </div>
-        </div>
 
-        <div id="scan-results" style="display: none;">
-            <h3>Texte Détecté</h3>
-            <textarea id="detected-text" rows="5" placeholder="Le texte détecté apparaîtra ici..."></textarea>
-            
-            <p style="font-size: 0.9em; color: var(--text-muted);">Vérifiez et transférez.</p>
-            <button type="button" class="btn" onclick="fillSimpleForm()">Remplir le Formulaire</button>
-        </div>
-    </div>
     
     <style>
         .suggestions-box {
@@ -118,7 +71,7 @@
 {% endblock content %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <script>
     let booksMetadata = [];
 
@@ -176,146 +129,6 @@
         }
     });
 
-    function toggleScan() {
-        const section = document.getElementById('scan-section');
-        if (section.style.display === 'none') {
-            section.style.display = 'block';
-            section.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            section.style.display = 'none';
-        }
-    }
 
-    async function handleImage(input) {
-        if (!input.files || !input.files[0]) return;
-        
-        const file = input.files[0];
-        const preview = document.getElementById('scan-preview');
-        const container = document.getElementById('preview-container');
-        const loading = document.getElementById('loading-ocr');
-        const progBar = document.getElementById('ocr-progressbar');
-        const progText = document.getElementById('progress-text');
-        const debugLog = document.getElementById('debug-log');
-        const results = document.getElementById('scan-results');
-        const textarea = document.getElementById('detected-text');
-
-        // Show preview
-        preview.src = URL.createObjectURL(file);
-        container.style.display = 'block';
-        loading.style.display = 'block';
-        results.style.display = 'none';
-        textarea.value = "";
-        progBar.value = 0;
-        progText.innerText = "0%";
-        debugLog.innerText = "Démarrage...\n";
-
-        function logDebug(msg) {
-            debugLog.innerText += msg + "\n";
-            debugLog.scrollTop = debugLog.scrollHeight;
-        }
-
-        try {
-            logDebug("Création du worker Tesseract (v5)...");
-            
-            // Tesseract v5 pattern: createWorker(languages, oem, options)
-            // 1 = OEM.DEFAULT
-            const worker = await Tesseract.createWorker('eng+fra', 1, {
-                logger: m => {
-                    logDebug(`[${m.status}] ${Math.round(m.progress * 100)}%`);
-                    
-                    if (m.status === 'recognizing text') {
-                        const pct = Math.round(m.progress * 100);
-                        progBar.value = pct;
-                        progText.innerText = `${pct}%`;
-                    } else {
-                        progText.innerText = m.status;
-                    }
-                }
-            });
-            
-            // In v5, createWorker with args already loads and initializes.
-            // We can directly recognize.
-            
-            logDebug("Reconnaissance en cours...");
-            const { data: { text } } = await worker.recognize(file);
-            
-            logDebug("Terminé !");
-            textarea.value = text;
-            results.style.display = 'block';
-            await worker.terminate();
-            
-            // Auto-fill form immediately
-            fillSimpleForm(true); 
-
-        } catch (e) {
-            console.error(e);
-            logDebug("ERREUR Local: " + e.message);
-            
-            // FALLBACK TO SERVER
-            if (e.success === undefined || e.toString().includes('undefined') || true) { // Force fallback on error
-                 logDebug("Tentative via le serveur...");
-                 try {
-                     const formData = new FormData();
-                     formData.append('file', file);
-                     
-                     const response = await fetch('/api/scan', {
-                         method: 'POST',
-                         body: formData
-                     });
-                     
-                     if (response.ok) {
-                         const serverText = await response.text();
-                         logDebug("Succès Serveur !");
-                         textarea.value = serverText;
-                         results.style.display = 'block';
-                         fillSimpleForm(true);
-                     } else {
-                         throw new Error("Erreur serveur: " + response.statusText);
-                     }
-                 } catch (serverErr) {
-                     logDebug("ECHEC Serveur: " + serverErr.message);
-                     alert("Échec de l'analyse (Locale et Serveur).");
-                 }
-            } else {
-                alert("Erreur OCR: " + e.message);
-            }
-        } finally {
-            loading.style.display = 'none';
-        }
-    }
-
-    function fillSimpleForm(auto = false) {
-        const text = document.getElementById('detected-text').value;
-        // Split and filter garbage
-        const lines = text.split('\n')
-            .map(l => l.trim())
-            .filter(l => {
-                // Filter out empty lines
-                if (!l) return false;
-                // Filter out very short lines (often noise like "1", "I", etc.) unless it looks like a year
-                if (l.length < 3) return false;
-                // Filter out lines that are purely symbols (must have at least one alphanumeric char)
-                if (!/[a-zA-Z0-9]/.test(l)) return false;
-                return true;
-            });
-
-        if (lines.length > 0) {
-            const form = document.querySelector('#add-form');
-            if (lines[0]) form.title.value = lines[0];
-            if (lines[1]) form.author.value = lines[1];
-            // Put raw text in description, preserving original for manual review if needed
-            form.description.value = text;
-            
-            toggleScan(); // Close scan section
-            window.scrollTo(0,0);
-            
-            // Log success to debug instead of alert
-            const debugLog = document.getElementById('debug-log');
-            if(debugLog) {
-                debugLog.innerText += "Formulaire rempli (filtré).\n";
-                debugLog.scrollTop = debugLog.scrollHeight;
-            }
-        }
-    }
 </script>
 {% endblock scripts %}

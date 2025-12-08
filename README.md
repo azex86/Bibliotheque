@@ -1,6 +1,6 @@
 # 📚 Bibliothèque - Gestionnaire de Collection de Livres
 
-Application web moderne pour gérer votre collection de livres avec support OCR, recherche avancée, et gestion d'images de couverture.
+Application web moderne pour gérer votre collection de livres avec recherche avancée et gestion d'images de couverture.
 
 ![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)
 ![Rocket](https://img.shields.io/badge/Rocket-0.5-blue.svg)
@@ -16,13 +16,7 @@ Application web moderne pour gérer votre collection de livres avec support OCR,
 - **Groupement intelligent** par titre (série) ou auteur
 - **Recherche en temps réel** sur titre et auteur
 
-### 🔍 OCR & Scan
-- **Scan de couverture** avec OCR intégré (Tesseract.js)
-- **Deux modes de capture** : Appareil photo ou galerie
-- **Extraction automatique** du titre et de l'auteur
-- **Fallback serveur** si l'OCR client échoue
-- **Filtrage intelligent** des données OCR (suppression du bruit)
-- **Barre de progression** visuelle avec logs de débogage
+
 
 ### 🎨 Interface Utilisateur
 - **Design moderne** et responsive (mobile-friendly)
@@ -43,29 +37,6 @@ Application web moderne pour gérer votre collection de livres avec support OCR,
 ### Prérequis
 - **Rust** 1.70 ou supérieur ([installer Rust](https://rustup.rs/))
 - **SQLite** (inclus avec Rust)
-- **(Optionnel)** Tesseract OCR pour le fallback serveur
-
-### Installation de Tesseract (optionnel)
-Pour activer l'OCR côté serveur en cas d'échec client :
-
-**Windows** :
-```powershell
-# Via Chocolatey
-choco install tesseract
-
-# Ou télécharger depuis
-# https://github.com/UB-Mannheim/tesseract/wiki
-```
-
-**Linux** :
-```bash
-sudo apt-get install tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng
-```
-
-**macOS** :
-```bash
-brew install tesseract tesseract-lang
-```
 
 ### Démarrage rapide
 ```bash
@@ -83,9 +54,7 @@ cargo run
 
 ### Interface Web
 1. **Accueil** : `http://localhost:8000`
-2. **Ajouter un livre** : Cliquez sur "Ajouter un livre"
-   - Remplissez le formulaire manuellement
-   - OU utilisez "Scan (Photo)" pour extraire les infos via OCR
+2. **Ajouter un livre** : Cliquez sur "Ajouter un livre" et remplissez le formulaire
 3. **Liste des livres** : Recherchez, filtrez et groupez vos livres
 4. **Éditer** : Cliquez sur "Éditer" pour modifier un livre
 
@@ -123,14 +92,7 @@ GET /api/books/metadata
 ```
 Retourne la liste complète des livres au format JSON.
 
-#### Scanner une image (OCR serveur)
-```bash
-POST /api/scan
-Content-Type: multipart/form-data
 
-file: <image>
-```
-Retourne le texte extrait de l'image.
 
 ## 📁 Structure du Projet
 
@@ -143,7 +105,7 @@ Bibliotheque/
 ├── templates/
 │   ├── base.html.tera   # Template de base
 │   ├── index.html.tera  # Page d'accueil
-│   ├── add.html.tera    # Formulaire d'ajout (avec OCR)
+│   ├── add.html.tera    # Formulaire d'ajout
 │   ├── edit.html.tera   # Formulaire d'édition
 │   └── list.html.tera   # Liste des livres
 ├── migrations/          # Migrations SQLite
@@ -192,20 +154,12 @@ RUST_LOG=debug cargo run
 ### Autocomplete Intelligent
 Lorsque vous tapez un titre de livre, l'application suggère automatiquement l'auteur basé sur les livres existants dans votre collection.
 
-### OCR avec Fallback
-1. **Tentative client** : Tesseract.js dans le navigateur
-2. **Si échec** : Upload automatique vers le serveur pour OCR
-3. **Filtrage** : Suppression automatique des lignes parasites
-
 ### Gestion des Volumes
 - Champ `volume_number` pour les séries
 - Tri automatique par volume dans la liste
 - Groupement par titre de série
 
 ## 🐛 Débogage
-
-### Logs OCR
-Les logs de progression OCR sont affichés directement dans l'interface lors du scan.
 
 ### Logs Serveur
 ```bash
@@ -223,10 +177,7 @@ ls -la uploads/
 - Vérifiez les permissions du dossier
 - Consultez les logs serveur pour les erreurs de conversion
 
-**OCR ne fonctionne pas** :
-- Vérifiez la console navigateur (F12)
-- Assurez-vous que Tesseract est installé pour le fallback serveur
-- Essayez avec une image de meilleure qualité
+
 
 **Erreur 413 (Payload Too Large)** :
 - Augmentez la limite dans `Rocket.toml` (section `[default.limits]`)
@@ -269,7 +220,7 @@ CMD ["Bibliotheque"]
 - **[SQLite](https://www.sqlite.org/)** - Base de données
 - **[SQLx](https://github.com/launchbadge/sqlx)** - Driver SQL asynchrone
 - **[Tera](https://tera.netlify.app/)** - Moteur de templates
-- **[Tesseract.js](https://tesseract.projectnaptha.com/)** - OCR client-side
+
 - **[image-rs](https://github.com/image-rs/image)** - Traitement d'images
 
 ## 📝 Licence

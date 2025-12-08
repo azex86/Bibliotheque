@@ -99,8 +99,7 @@ fn rocket() -> _ {
             routes::list_books,
             routes::edit_book_form,
             routes::edit_book,
-            routes::get_metadata,
-            routes::scan_image
+            routes::get_metadata
         ])
         .mount("/uploads", rocket::fs::FileServer::from("uploads"));
 

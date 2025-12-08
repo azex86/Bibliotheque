@@ -7,12 +7,11 @@ Guide complet pour utiliser l'application de gestion de bibliothèque.
 1. [Premiers Pas](#premiers-pas)
 2. [Ajouter des Livres](#ajouter-des-livres)
 3. [Gérer votre Collection](#gérer-votre-collection)
-4. [Utiliser l'OCR](#utiliser-locr)
-5. [Gestion des Images](#gestion-des-images)
-6. [Recherche et Filtrage](#recherche-et-filtrage)
-7. [Édition de Livres](#édition-de-livres)
-8. [Trucs et Astuces](#trucs-et-astuces)
-9. [Résolution de Problèmes](#résolution-de-problèmes)
+4. [Gestion des Images](#gestion-des-images)
+5. [Recherche et Filtrage](#recherche-et-filtrage)
+6. [Édition de Livres](#édition-de-livres)
+7. [Trucs et Astuces](#trucs-et-astuces)
+8. [Résolution de Problèmes](#résolution-de-problèmes)
 
 ---
 
@@ -59,32 +58,7 @@ Pour "Harry Potter à l'école des sorciers" (Tome 1) :
 - **Auteur** : J.K. Rowling
 - **Année** : 1997
 
-### Méthode 2 : Scan OCR
 
-1. Cliquez sur "Ajouter un livre"
-2. Cliquez sur le bouton "Scan (Photo)"
-3. Choisissez votre méthode :
-   - **📷 Prendre une Photo** : Utilise l'appareil photo
-   - **🖼️ Importer une Image** : Sélectionne depuis la galerie
-
-4. L'application analyse automatiquement l'image
-5. Les champs sont pré-remplis avec les informations détectées
-6. Vérifiez et corrigez si nécessaire
-7. Cliquez sur "Ajouter"
-
-#### Conseils pour un Bon Scan
-
-✅ **À faire** :
-- Utilisez une image nette et bien éclairée
-- Cadrez uniquement la couverture
-- Assurez-vous que le texte est lisible
-- Utilisez des images JPG ou PNG
-
-❌ **À éviter** :
-- Images floues ou mal éclairées
-- Reflets sur la couverture
-- Texte trop petit
-- Images HEIC (convertissez d'abord)
 
 ---
 
@@ -117,40 +91,7 @@ Utilisez les boutons en haut de la liste :
 
 ---
 
-## Utiliser l'OCR
 
-### Fonctionnement
-
-L'OCR (Optical Character Recognition) extrait automatiquement le texte d'une image de couverture.
-
-#### Processus en 2 Étapes
-
-1. **OCR Client (Navigateur)**
-   - Traitement rapide dans votre navigateur
-   - Utilise Tesseract.js
-   - Pas besoin de connexion internet
-
-2. **OCR Serveur (Fallback)**
-   - Si l'OCR client échoue
-   - Upload automatique vers le serveur
-   - Nécessite Tesseract installé sur le serveur
-
-### Barre de Progression
-
-Pendant le scan, vous verrez :
-- **Pourcentage de progression** (0% → 100%)
-- **Logs détaillés** dans la zone de débogage
-- **Messages d'état** (chargement, reconnaissance, etc.)
-
-### Filtrage Automatique
-
-L'application filtre automatiquement :
-- ❌ Lignes vides
-- ❌ Lignes trop courtes (< 3 caractères)
-- ❌ Symboles parasites (%,  $, etc.)
-- ✅ Garde uniquement le texte pertinent
-
----
 
 ## Gestion des Images
 
@@ -249,8 +190,7 @@ Cela permet un groupement et tri automatique parfait !
 
 ### Raccourcis Clavier
 
-- `Ctrl + F` : Focus sur la barre de recherche (navigateur)
-- `Échap` : Fermer la fenêtre de scan
+
 
 ### Optimisation des Images
 
@@ -263,15 +203,7 @@ Pour des temps de chargement rapides :
 
 ## Résolution de Problèmes
 
-### L'OCR ne fonctionne pas
 
-**Symptômes** : La barre reste à 0%, ou message d'erreur
-
-**Solutions** :
-1. Vérifiez la console navigateur (F12)
-2. Essayez avec une image de meilleure qualité
-3. Vérifiez que Tesseract est installé (pour le fallback serveur)
-4. Rechargez la page
 
 ### L'image ne s'affiche pas
 
@@ -358,10 +290,8 @@ RUST_LOG=debug cargo run
 
 ## Glossaire
 
-- **OCR** : Optical Character Recognition - Reconnaissance optique de caractères
 - **Tome/Volume** : Un livre faisant partie d'une série
 - **Série** : Collection de livres liés (ex: Harry Potter)
-- **Fallback** : Solution de secours si la première méthode échoue
 - **HEIC** : Format d'image Apple (iPhone)
 - **JPEG/JPG** : Format d'image standard
 

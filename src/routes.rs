@@ -225,51 +225,6 @@ pub async fn list_books(mut db: Connection<Db>, q: Option<String>, sort: Option<
     }))
 }
 
-#[derive(FromForm)]
-pub struct ScanUpload<'r> {
-    file: TempFile<'r>,
-}
-
-#[post("/api/scan", data = "<upload>")]
-pub async fn scan_image(mut upload: Form<ScanUpload<'_>>) -> Result<String, Status> {
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-    let temp_path = Path::new("uploads").join(format!("temp_ocr_{}.png", timestamp));
-    let _ = std::fs::create_dir_all("uploads");
-
-    if let Err(e) = upload.file.persist_to(&temp_path).await {
-        eprintln!("Failed to save temp file for OCR: {}", e);
-        return Err(Status::InternalServerError);
-    }
-
-    // Call Tesseract
-    let output = std::process::Command::new("tesseract")
-        .arg(&temp_path)
-        .arg("stdout") // print to stdout
-        .arg("-l")
-        .arg("eng+fra")
-        .output();
-    
-    // Clean up temp file
-    let _ = std::fs::remove_file(&temp_path);
-
-    match output {
-        Ok(o) => {
-            if o.status.success() {
-                let text = String::from_utf8_lossy(&o.stdout).to_string();
-                Ok(text)
-            } else {
-                eprintln!("Tesseract Error: {}", String::from_utf8_lossy(&o.stderr));
-                Err(Status::InternalServerError)
-            }
-        },
-        Err(e) => {
-            eprintln!("Failed to execute tesseract: {}", e);
-            // This likely means tesseract is not installed
-            Err(Status::ServiceUnavailable)
-        }
-    }
-}
-
 #[get("/api/books/metadata")]
 pub async fn get_metadata(mut db: Connection<Db>) -> Json<Vec<Book>> {
     let books = sqlx::query_as::<_, Book>("SELECT id, title, subtitle, author, year, description, volume_number, cover_path FROM books")
