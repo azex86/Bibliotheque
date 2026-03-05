@@ -24,6 +24,8 @@ fn rocket() -> _ {
     let db_shm = "bibliotheque.db-shm";
     let db_wal = "bibliotheque.db-wal";
 
+    let upload_path = std::path::Path::new("uploads");
+
     if args.contains(&"--help".to_string()) || args.contains(&"-h".to_string()) {
         println!("Bibliotheque - Gestionnaire de livres personnel");
         println!("Usage: cargo run -- [OPTIONS]");
@@ -74,6 +76,14 @@ fn rocket() -> _ {
     if let Some(port) = port_override {
         figment = figment.merge(("port", port));
     }
+
+    if !upload_path.exists() || !upload_path.is_dir() {
+        println!("Crétion du dossier {}",upload_path.display());
+        if let Err(error) = fs::create_dir_all(upload_path) {
+            eprintln!("Impossible de creer le dossier  {} : {}",upload_path.display(),error);
+        }
+    }
+    
 
     let mut app = rocket::custom(figment)
         .attach(Db::init())
